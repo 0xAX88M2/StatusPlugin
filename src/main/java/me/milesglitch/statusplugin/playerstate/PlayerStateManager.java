@@ -8,7 +8,6 @@ import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,12 +16,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static java.util.Objects.requireNonNull;
 
 public class PlayerStateManager implements Listener, PluginMessageListener {
     private final ConcurrentHashMap<UUID, PlayerState> states;
@@ -52,25 +48,23 @@ public class PlayerStateManager implements Listener, PluginMessageListener {
 
     @EventHandler
     private void notifyPlayer(PlayerJoinEvent event) {
-        ServerPlayer player = MinecraftServer.getServer().getPlayerList().getPlayer(event.getPlayer().getUniqueId());
-        assert player != null;
-        broadcastState(player.server, new PlayerState(player.getUUID()));
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        playerStatesToBytes(states, buf);
+        event.getPlayer().sendPluginMessage(StatusPlugin.PLUGIN, "status:states", buf.array());
+        broadcastState(new PlayerState(event.getPlayer().getUniqueId()));
     }
 
     @EventHandler
     private void removePlayer(PlayerQuitEvent event){
-        ServerPlayer player = MinecraftServer.getServer().getPlayerList().getPlayer(event.getPlayer().getUniqueId());
-        assert player != null;
-        states.remove(player.getUUID());
-        broadcastState(player.server, new PlayerState(player.getUUID()));
+        states.remove(event.getPlayer().getUniqueId());
+        broadcastState(new PlayerState(event.getPlayer().getUniqueId()));
     }
 
-    private void broadcastState(MinecraftServer server, PlayerState state) {
+    private void broadcastState(PlayerState state) {
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         state.toBytes(buf);
-        server.getPlayerList().getPlayers().forEach(
-                p -> requireNonNull(Bukkit.getPlayer(p.getUUID()))
-                        .sendPluginMessage(StatusPlugin.PLUGIN, "status:state", buf.array())
+        StatusPlugin.PLUGIN.getServer().getOnlinePlayers().forEach(player ->
+                player.sendPluginMessage(StatusPlugin.PLUGIN, "status:state", buf.array())
         );
     }
 
@@ -87,27 +81,21 @@ public class PlayerStateManager implements Listener, PluginMessageListener {
         return players;
     }
 
-    @Nullable
-    public PlayerState getState(UUID playerUUID) {
-        return states.get(playerUUID);
-    }
-
-    public Collection<PlayerState> getStates() {
-        return states.values();
+    private void playerStatesToBytes(ConcurrentHashMap<UUID, PlayerState> playerStates, FriendlyByteBuf buf){
+        buf.writeInt(playerStates.size());
+        for (Map.Entry<UUID, PlayerState> entry : playerStates.entrySet()) {
+            entry.getValue().toBytes(buf);
+        }
     }
 
     @Override
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, byte @NotNull [] message) {
-        switch (channel){
-            case "status:state":
-                FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(message));
-                PlayerState state = PlayerState.fromBytes(buf);
-                state.setPlayer(player.getUniqueId());
-                states.put(player.getUniqueId(), state);
-                StatusPlugin.PLUGIN.getLogger().info("[PlayerStatePacket] "+ state);
-                break;
-            case "status:states":
-                break;
+        if (channel.equals("status:state")) {
+            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(message));
+            PlayerState state = PlayerState.fromBytes(buf);
+            state.setPlayer(player.getUniqueId());
+            states.put(player.getUniqueId(), state);
+            StatusPlugin.PLUGIN.getLogger().info("[PlayerStatePacket] " + state);
         }
     }
 }
