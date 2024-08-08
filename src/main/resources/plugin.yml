@@ -1,6 +1,6 @@
 name: $name
 version: $version
-main: me.milesglitch.statusplugin.StatusPlugin
+main: me.milesglitch.statusplugin.Status
 description: $description
 website: "https://github.com/0xAX88M2/StatusPlugin"
 authors:
