@@ -6,8 +6,8 @@ plugins {
 }
 
 group = "me.milesglitch.statusplugin"
-version = "0.0.2"
-description = "Поддержка мода status"
+version = "1.0.0"
+description = "Support for Status mod by henkelmax for paper api"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))
@@ -18,10 +18,12 @@ repositories {
     maven("https://s01.oss.sonatype.org/content/repositories/snapshots/")
     maven("https://jitpack.io")
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://maven.maxhenkel.de/repository/public")
 }
 
 dependencies {
     paperweight.paperDevBundle(libs.versions.paper)
+    implementation(libs.configbuilder)
 }
 
 tasks {

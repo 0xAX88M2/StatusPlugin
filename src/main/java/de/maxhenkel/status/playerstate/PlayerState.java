@@ -1,4 +1,4 @@
-package me.milesglitch.statusplugin.playerstate;
+package de.maxhenkel.status.playerstate;
 
 import net.minecraft.network.FriendlyByteBuf;
 
@@ -67,10 +67,5 @@ public class PlayerState {
         buf.writeUtf(availability.getName(), 128);
         buf.writeUtf(state, 128);
         buf.writeBoolean(noSleep);
-    }
-
-    @Override
-    public String toString() {
-        return "[ Player: "+getPlayer() +" Availability:"+ availability +" State:"+state+ " noSleep:"+ noSleep+" ]";
     }
 }

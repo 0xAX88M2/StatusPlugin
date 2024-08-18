@@ -1,8 +1,9 @@
 package me.milesglitch.statusplugin;
 
-import io.netty.buffer.ByteBuf;
+import de.maxhenkel.configbuilder.ConfigBuilder;
+import de.maxhenkel.status.config.ServerConfig;
 import io.netty.buffer.Unpooled;
-import me.milesglitch.statusplugin.playerstate.PlayerState;
+import de.maxhenkel.status.playerstate.PlayerState;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
@@ -30,13 +31,21 @@ import java.util.logging.Logger;
 
 public class Status extends JavaPlugin implements Listener, PluginMessageListener {
     private final ConcurrentHashMap<UUID, PlayerState> states = new ConcurrentHashMap<>();;
+
     public static Logger log;
     public static Status PLUGIN;
+
+    public static ServerConfig SERVER_CONFIG;
 
     @Override
     public void onEnable() {
         PLUGIN = this;
         log = PLUGIN.getLogger();
+        SERVER_CONFIG = ConfigBuilder
+                .builder(ServerConfig::new)
+                .path(PLUGIN.getServer().getPluginsFolder().toPath().resolve("status-plugin").resolve("status-server.properties"))
+                .build();
+
         Messenger msg = Bukkit.getMessenger();
         msg.registerOutgoingPluginChannel(this, "status:state");
         msg.registerIncomingPluginChannel(this, "status:state", this);
@@ -54,13 +63,12 @@ public class Status extends JavaPlugin implements Listener, PluginMessageListene
             return;
         }
 
-        player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("No Sleep")));
+        player.connection.send(new ClientboundSetTitleTextPacket(Component.literal(Status.SERVER_CONFIG.noSleepTitle.get())));
         if (noSleepPlayers.size() > 1) {
-            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(player.displayName+" does not want you to sleep")));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(Status.SERVER_CONFIG.noSleepMultipleSubtitle.get())));
         } else {
-            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(String.format("Some players do not want you to sleep", noSleepPlayers.get(0).getDisplayName().getString()))));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(String.format(Status.SERVER_CONFIG.noSleepPlayerSubtitle.get(), noSleepPlayers.get(0).getDisplayName().getString()))));
         }
-
     }
 
     @EventHandler

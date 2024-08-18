@@ -1,5 +1,4 @@
-package me.milesglitch.statusplugin.playerstate;
-
+package de.maxhenkel.status.playerstate;
 
 public enum Availability {
 
